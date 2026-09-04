@@ -2,6 +2,13 @@
 
 All notable public changes to Text+ Style Gallery will be documented here.
 
+## v1.0.1 - 2026-09-04
+
+### Fixed
+
+- Fixed an issue where some Shading Elements, especially shadows, were not fully applied on the first click.
+- Shading Elements that have not yet been instantiated by DaVinci Resolve are now initialized before their properties are applied.
+- Styles containing previously unused Shading Elements now apply correctly with a single click.
 ## [1.0.0] - 2026-09-04
 
 ### Initial public release
