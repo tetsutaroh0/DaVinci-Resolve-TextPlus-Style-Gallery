@@ -28,15 +28,41 @@ Save frequently used Text+ looks, preview them as thumbnails, and apply them to 
 
 ## Installation
 
-Save `TextPlus_Style_Gallery.lua` in a DaVinci Resolve/Fusion Scripts **Utility** folder available to your installation, then restart DaVinci Resolve if the script is not immediately listed.
+Download `TextPlus_Style_Gallery.lua` from the latest GitHub Release.
 
-A common per-user location on Windows is:
+### Windows
+
+Copy `TextPlus_Style_Gallery.lua` to the following folder:
 
 ```text
 %APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\
 ```
 
-After installation, launch the script from DaVinci Resolve's **Workspace > Scripts** menu (the exact menu grouping can vary by Resolve version and installation).
+You can paste the path above directly into the Windows File Explorer address bar.
+
+If the `Utility` folder does not exist, create it.
+
+### macOS
+
+Copy `TextPlus_Style_Gallery.lua` to the following folder:
+
+```text
+~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/
+```
+
+If the `Utility` folder does not exist, create it.
+
+### After installation
+
+1. Restart DaVinci Resolve if it is already running.
+2. Open DaVinci Resolve and load your project.
+3. Make sure the project contains a **Text+** title.
+4. Open **Workspace > Scripts** from the DaVinci Resolve menu.
+5. Select **TextPlus_Style_Gallery**.
+
+The **Text+ Style Gallery** window should appear.
+
+> **Note:** The exact script location or menu structure may vary depending on your DaVinci Resolve version and installation.
 
 ## Basic usage
 
