@@ -1,5 +1,5 @@
 -- Text+ Style Gallery for DaVinci Resolve / Fusion
--- Version 1.0.1
+-- Version 1.0.2
 -- Release date: 2026-09-04
 --
 -- A native Lua Text+ style manager with 100 style slots, SVG previews,
@@ -8,7 +8,7 @@
 -- Copyright (c) 2026 Text+ Style Gallery contributors
 -- Licensed under the MIT License.
 
-local VERSION = "1.0.1"
+local VERSION = "1.0.2"
 local RELEASE_DATE = "2026-09-04"
 
 local PAGE_SIZE = 10
@@ -1094,7 +1094,7 @@ local function run_gallery()
     local fu = get_fusion(); if not fu then error("Fusion handle unavailable") end
     local ui = fu.UIManager
     local disp = bmd.UIDispatcher(ui)
-    local geometry = {100,100,770,790}
+    local geometry = {100,100,640,790}
     local current_page = 0
 
     -- Build the window only once so Prev/Next can update the existing rows
@@ -1102,15 +1102,15 @@ local function run_gallery()
     local rows = {}
     rows[#rows+1] = ui:Label{ID="title", Text="Text+ Style Gallery (Lua Universal 10x10)  v"..VERSION, Weight=0}
     rows[#rows+1] = ui:HGroup{Weight=0, Spacing=6,
-        ui:Label{Text="Clip Color Filter:",Weight=0}, ui:ComboBox{ID="clipColor",Weight=0,MinimumSize={180,0}},
-        ui:Label{Text="",Weight=0,MinimumSize={18,0},MaximumSize={18,16777215}},
-        ui:Label{Text="Video Track:",Weight=0}, ui:ComboBox{ID="trackSelect",Weight=0,MinimumSize={90,0}}
+        ui:Label{Text="Clip Color Filter:",Weight=0}, ui:ComboBox{ID="clipColor",Weight=0,MinimumSize={145,0}},
+        ui:Label{Text="",Weight=0,MinimumSize={8,0},MaximumSize={8,16777215}},
+        ui:Label{Text="Video Track:",Weight=0}, ui:ComboBox{ID="trackSelect",Weight=0,MinimumSize={70,0}}
     }
     rows[#rows+1] = ui:Label{Text="Click thumbnail to Apply. Capture reads style from Text+ at playhead. StyledText is preserved.",Weight=0}
     rows[#rows+1] = ui:HGroup{Weight=0,Spacing=6,
         ui:Button{ID="exportBtn",Text="Export",Weight=0,MinimumSize={72,0}},
         ui:Button{ID="importBtn",Text="Import",Weight=0,MinimumSize={72,0}},
-        ui:LineEdit{ID="fileName",Text=FIXED_STYLES_NAME,Weight=1,MinimumSize={180,0},MaximumSize={420,16777215}},
+        ui:LineEdit{ID="fileName",Text=FIXED_STYLES_NAME,Weight=1,MinimumSize={105,0},MaximumSize={210,16777215}},
         ui:Button{ID="browseBtn",Text="Browse...",Weight=0,MinimumSize={78,0}}
     }
     rows[#rows+1] = ui:HGroup{Weight=0,Spacing=6,
@@ -1123,7 +1123,7 @@ local function run_gallery()
         rows[#rows+1] = ui:HGroup{Weight=0,Spacing=6,
             ui:Label{ID="seq_"..ri,Text=tostring(ri),Weight=0,MinimumSize={20,0}},
             ui:Button{ID="thumb_"..ri,Text="(empty)",Weight=0,MinimumSize={THUMB_W,THUMB_H},MaximumSize={THUMB_W,THUMB_H}},
-            ui:LineEdit{ID="name_"..ri,Text="",Weight=1,MinimumSize={160,0},MaximumSize={280,16777215}},
+            ui:LineEdit{ID="name_"..ri,Text="",Weight=1,MinimumSize={90,0},MaximumSize={140,16777215}},
             ui:Button{ID="capture_"..ri,Text="Capture",Weight=0,MinimumSize={70,0}},
             ui:Button{ID="delete_"..ri,Text="Delete",Weight=0,MinimumSize={70,0}}
         }
