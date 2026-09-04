@@ -2,6 +2,16 @@
 
 All notable public changes to Text+ Style Gallery will be documented here.
 
+## v1.0.2 - 2026-09-04
+
+### Changed
+
+- Reduced the gallery window width for a more compact layout.
+- Kept thumbnail previews at the same size.
+- Shortened the style-name input fields.
+- Shortened the JSON filename input field.
+- Slightly compacted the top filter controls.
+- Adjusted the final window width so the Capture and Delete buttons remain fully visible.
 ## v1.0.1 - 2026-09-04
 
 ### Fixed
