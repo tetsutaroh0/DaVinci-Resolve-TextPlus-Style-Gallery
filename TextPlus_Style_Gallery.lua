@@ -1,5 +1,5 @@
 -- Text+ Style Gallery for DaVinci Resolve / Fusion
--- Version 1.0.0
+-- Version 1.0.1
 -- Release date: 2026-09-04
 --
 -- A native Lua Text+ style manager with 100 style slots, SVG previews,
@@ -8,7 +8,7 @@
 -- Copyright (c) 2026 Text+ Style Gallery contributors
 -- Licensed under the MIT License.
 
-local VERSION = "1.0.0"
+local VERSION = "1.0.1"
 local RELEASE_DATE = "2026-09-04"
 
 local PAGE_SIZE = 10
@@ -602,43 +602,77 @@ local function apply_shading_elements(tool, elements)
     if type(elements) ~= "table" then return false end
     local changed = false
     local captured = {}
+
     for _, e in ipairs(elements) do
         local i = tonumber(e.index)
         if i and i >= 1 and i <= 8 then captured[i] = true end
     end
 
-    -- Make the destination's Shading stack match the captured style.  Do this
-    -- once here instead of also replaying raw EnabledN/AlphaN/etc generically.
-    for i=1,8 do
-        if not captured[i] then set_input_safe(tool, "Enabled"..i, 0) end
+    -- Disable elements that are not part of the captured style.
+    for i = 1, 8 do
+        if not captured[i] then
+            if set_input_safe(tool, "Enabled"..i, 0) then changed = true end
+        end
     end
 
-    -- Apply element properties first and enable the element last.  This avoids
-    -- partially-painted intermediate states while Resolve is processing the
-    -- sequence of SetInput calls.
+    -- IMPORTANT:
+    -- Some Text+ Shading Elements do not expose ElementShapeN and the other
+    -- per-element controls until EnabledN has been turned on at least once.
+    -- Writing ElementShape/Color/Thickness/etc. to such an uninstantiated
+    -- element is silently ignored by Resolve.  The first Apply therefore only
+    -- creates the element; the second Apply then succeeds.
+    --
+    -- Bootstrap every captured element first.  Once EnabledN=1 has caused
+    -- Resolve to instantiate its controls, configure the element.
     for _, e in ipairs(elements) do
         local i = tonumber(e.index)
         if i and i >= 1 and i <= 8 then
+            local shape_before = safe_call(function() return tool:GetInput("ElementShape"..i) end)
+            if shape_before == nil then
+                log_line("apply: bootstrapping missing Shading Element " .. tostring(i))
+                if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
+                -- Touch the input after enabling so Resolve has a chance to expose
+                -- the element-specific controls before we write them below.
+                safe_call(function() return tool:GetInput("ElementShape"..i) end)
+            end
+        end
+    end
+
+    -- Configure every captured element while it is instantiated/enabled.
+    for _, e in ipairs(elements) do
+        local i = tonumber(e.index)
+        if i and i >= 1 and i <= 8 then
+            -- Ensure it remains enabled during configuration.
+            if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
+
             local ordered = {
                 {"Name","name"}, {"ElementShape","shape"},
+                {"OutsideOnly","outside_only"}, {"PriorityBack","priority_back"},
+                {"OverrideColor","override_color"},
                 {"Red","red"}, {"Green","green"}, {"Blue","blue"}, {"Alpha","alpha"},
                 {"Thickness","thickness"}, {"Opacity","opacity"},
                 {"Softness","softness"}, {"SoftnessX","softness_x"},
                 {"SoftnessY","softness_y"}, {"SoftnessGlow","softness_glow"},
-                {"OutsideOnly","outside_only"}, {"PriorityBack","priority_back"},
-                {"OverrideColor","override_color"},
             }
+
             for _, pair in ipairs(ordered) do
                 local prefix, key = pair[1], pair[2]
-                if e[key] ~= nil and set_input_safe(tool, prefix..i, e[key]) then changed = true end
+                if e[key] ~= nil and set_input_safe(tool, prefix..i, e[key]) then
+                    changed = true
+                end
             end
+
             if e.offset_x ~= nil or e.offset_y ~= nil then
-                local pt = { tonumber(e.offset_x) or 0, tonumber(e.offset_y) or 0, 0 }
+                local pt = {
+                    tonumber(e.offset_x) or 0,
+                    tonumber(e.offset_y) or 0,
+                    0
+                }
                 if set_input_safe(tool, "Offset"..i, pt) then changed = true end
             end
-            if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
         end
     end
+
     return changed
 end
 
