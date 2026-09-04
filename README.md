@@ -1,5 +1,9 @@
 # Text+ Style Gallery for DaVinci Resolve
 
+![Text+ Style Gallery for DaVinci Resolve](textplus-style-gallery.png)
+
+Text+ styles can be captured, previewed as thumbnails, and applied with a single click.
+
 A lightweight **native Lua style gallery for Text+** in DaVinci Resolve / Fusion.
 
 Save frequently used Text+ looks, preview them as thumbnails, and apply them to other Text+ clips without replacing the actual text content.
