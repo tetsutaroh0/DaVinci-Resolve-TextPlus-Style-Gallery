@@ -1,6 +1,6 @@
 -- Text+ Style Gallery for DaVinci Resolve / Fusion
--- Version 1.0.2
--- Release date: 2026-09-04
+-- Version 1.0.3
+-- Release date: 2026-09-07
 --
 -- A native Lua Text+ style manager with 100 style slots, SVG previews,
 -- multiple Shading Element support, and import/export.
@@ -8,8 +8,8 @@
 -- Copyright (c) 2026 Text+ Style Gallery contributors
 -- Licensed under the MIT License.
 
-local VERSION = "1.0.2"
-local RELEASE_DATE = "2026-09-04"
+local VERSION = "1.0.3"
+local RELEASE_DATE = "2026-09-07"
 
 local PAGE_SIZE = 10
 local PAGE_COUNT = 10
@@ -23,9 +23,10 @@ local THUMB_W, THUMB_H = 190, 54
 local CARD_BG = "#252525"
 
 local COLOR_OPTIONS = {
-    CURRENT_CLIP_OPTION, "Any", "Blue", "Cyan", "Green", "Yellow", "Red",
-    "Pink", "Purple", "Fuchsia", "Rose", "Lavender", "Sky", "Mint",
-    "Lemon", "Sand", "Cocoa", "Cream"
+    CURRENT_CLIP_OPTION, "Any",
+    "Orange", "Apricot", "Yellow", "Lime", "Olive", "Green",
+    "Teal", "Navy", "Blue", "Purple", "Violet", "Pink",
+    "Tan", "Beige", "Brown", "Chocolate"
 }
 
 -- ---------------------------------------------------------------------------
@@ -598,6 +599,30 @@ local function set_input_safe(tool, iid, value)
     return result ~= false
 end
 
+local function bootstrap_shading_elements(tool, elements)
+    if type(elements) ~= "table" then return false end
+    local changed = false
+
+    -- Resolve may not create the detailed inputs for an unused Shading Element
+    -- until EnabledN has been switched on once.  This bootstrap must happen
+    -- while the comp is NOT locked; otherwise the element may not instantiate
+    -- until Unlock(), which would reintroduce the old two-click shadow issue.
+    for _, e in ipairs(elements) do
+        local i = tonumber(e.index)
+        if i and i >= 1 and i <= 8 then
+            local shape_before = safe_call(function() return tool:GetInput("ElementShape"..i) end)
+            if shape_before == nil then
+                log_line("apply: bootstrapping missing Shading Element " .. tostring(i))
+                if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
+                -- Touch the newly-created control immediately while unlocked.
+                safe_call(function() return tool:GetInput("ElementShape"..i) end)
+            end
+        end
+    end
+
+    return changed
+end
+
 local function apply_shading_elements(tool, elements)
     if type(elements) ~= "table" then return false end
     local changed = false
@@ -608,6 +633,11 @@ local function apply_shading_elements(tool, elements)
         if i and i >= 1 and i <= 8 then captured[i] = true end
     end
 
+    -- Safety fallback: normally apply_params_to_item() bootstraps while the comp
+    -- is unlocked before entering the batched write section.  Keep this call so
+    -- direct/future uses of this function retain the one-click behavior.
+    if bootstrap_shading_elements(tool, elements) then changed = true end
+
     -- Disable elements that are not part of the captured style.
     for i = 1, 8 do
         if not captured[i] then
@@ -615,34 +645,10 @@ local function apply_shading_elements(tool, elements)
         end
     end
 
-    -- IMPORTANT:
-    -- Some Text+ Shading Elements do not expose ElementShapeN and the other
-    -- per-element controls until EnabledN has been turned on at least once.
-    -- Writing ElementShape/Color/Thickness/etc. to such an uninstantiated
-    -- element is silently ignored by Resolve.  The first Apply therefore only
-    -- creates the element; the second Apply then succeeds.
-    --
-    -- Bootstrap every captured element first.  Once EnabledN=1 has caused
-    -- Resolve to instantiate its controls, configure the element.
-    for _, e in ipairs(elements) do
-        local i = tonumber(e.index)
-        if i and i >= 1 and i <= 8 then
-            local shape_before = safe_call(function() return tool:GetInput("ElementShape"..i) end)
-            if shape_before == nil then
-                log_line("apply: bootstrapping missing Shading Element " .. tostring(i))
-                if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
-                -- Touch the input after enabling so Resolve has a chance to expose
-                -- the element-specific controls before we write them below.
-                safe_call(function() return tool:GetInput("ElementShape"..i) end)
-            end
-        end
-    end
-
     -- Configure every captured element while it is instantiated/enabled.
     for _, e in ipairs(elements) do
         local i = tonumber(e.index)
         if i and i >= 1 and i <= 8 then
-            -- Ensure it remains enabled during configuration.
             if set_input_safe(tool, "Enabled"..i, 1) then changed = true end
 
             local ordered = {
@@ -678,64 +684,105 @@ end
 
 local function apply_params_to_item(item, params)
     local changed, found = false, false
+
     for _, comp in ipairs(get_comp_list(item)) do
+        local tool_states = {}
+
+        -- Read all values that must be preserved BEFORE locking the comp.
+        -- Bootstrap missing Shading Elements here too, because Resolve may need
+        -- an unlocked comp to instantiate their detailed controls immediately.
         for _, tool in ipairs(find_text_tools(comp)) do
             found = true
 
-            -- Preserve the target clip's actual text.  Some Text+ inputs are coupled
-            -- internally, so writing a broad set of style inputs can indirectly reset
-            -- StyledText even though we never intentionally copy it.
-            local original_text = safe_call(function() return tool:GetInput("StyledText") end)
+            local state = {
+                tool = tool,
+                original_text = safe_call(function() return tool:GetInput("StyledText") end),
+                preserved = {},
+            }
 
-            -- Extra safety guard: even if Resolve exposes an unexpected alias for
-            -- a layout input, preserve the destination's most important spatial
-            -- values and restore them after applying appearance settings.
             local preserve_ids = {"Center", "LayoutType", "LayoutRotation", "LayoutWidth", "LayoutHeight"}
-            local preserved = {}
+            state.preserve_ids = preserve_ids
             for _, pid in ipairs(preserve_ids) do
-                preserved[pid] = safe_call(function() return tool:GetInput(pid) end)
+                state.preserved[pid] = safe_call(function() return tool:GetInput(pid) end)
             end
-
-            -- Apply the conservative typography subset first.  Shading is always
-            -- applied LAST so no legacy Outline/DropShadow alias can mutate the
-            -- freshly restored Shading stack afterwards.
-            local generic_applied, generic_skipped = 0, 0
-            for iid, value in pairs(params) do
-                if iid ~= "ShadingElements" then
-                    local safe_ok, safe_result = pcall(is_safe_generic_apply_id, iid)
-                    if not safe_ok then
-                        log_line("apply: safety predicate ERROR for " .. tostring(iid) .. ": " .. tostring(safe_result))
-                        generic_skipped = generic_skipped + 1
-                    elseif safe_result and not (params.ShadingElements and SHADING_LEGACY_ALIAS_IDS[iid]) then
-                        if set_input_safe(tool, iid, value) then
-                            changed = true
-                            generic_applied = generic_applied + 1
-                        else
-                            log_line("apply: SetInput rejected " .. tostring(iid))
-                        end
-                    else
-                        generic_skipped = generic_skipped + 1
-                    end
-                end
-            end
-            log_line(string.format("apply: generic safe applied=%d skipped=%d", generic_applied, generic_skipped))
 
             if params.ShadingElements then
-                if apply_shading_elements(tool, params.ShadingElements) then changed = true end
+                if bootstrap_shading_elements(tool, params.ShadingElements) then changed = true end
             end
 
-            -- Always restore destination text and placement after style application.
-            if original_text ~= nil then
-                local ok = pcall(function() tool:SetInput("StyledText", original_text) end)
-                if not ok then log_line("apply: WARNING failed to restore StyledText") end
+            table.insert(tool_states, state)
+        end
+
+        if #tool_states > 0 then
+            -- Test1 optimization: freeze Fusion evaluation while the many SetInput
+            -- calls for this comp are performed.  This does not change which values
+            -- are written or their ordering; it only aims to avoid repeated renders /
+            -- reevaluations between writes.  Unlock is guaranteed even on an error.
+            local locked = false
+            local lock_ok, lock_err = pcall(function() comp:Lock() end)
+            if lock_ok then
+                locked = true
+            else
+                log_line("apply: comp Lock() unavailable/failed; continuing unlocked: " .. tostring(lock_err))
             end
-            for _, pid in ipairs(preserve_ids) do
-                if preserved[pid] ~= nil then
-                    pcall(function() tool:SetInput(pid, preserved[pid]) end)
+
+            local apply_ok, apply_err = pcall(function()
+                for _, state in ipairs(tool_states) do
+                    local tool = state.tool
+
+                    -- Apply the same conservative typography subset as v1.0.2.
+                    local generic_applied, generic_skipped = 0, 0
+                    for iid, value in pairs(params) do
+                        if iid ~= "ShadingElements" then
+                            local safe_ok, safe_result = pcall(is_safe_generic_apply_id, iid)
+                            if not safe_ok then
+                                log_line("apply: safety predicate ERROR for " .. tostring(iid) .. ": " .. tostring(safe_result))
+                                generic_skipped = generic_skipped + 1
+                            elseif safe_result and not (params.ShadingElements and SHADING_LEGACY_ALIAS_IDS[iid]) then
+                                if set_input_safe(tool, iid, value) then
+                                    changed = true
+                                    generic_applied = generic_applied + 1
+                                else
+                                    log_line("apply: SetInput rejected " .. tostring(iid))
+                                end
+                            else
+                                generic_skipped = generic_skipped + 1
+                            end
+                        end
+                    end
+                    log_line(string.format("apply: generic safe applied=%d skipped=%d", generic_applied, generic_skipped))
+
+                    if params.ShadingElements then
+                        if apply_shading_elements(tool, params.ShadingElements) then changed = true end
+                    end
+
+                    -- Preserve v1.0.2 correctness: always restore destination text
+                    -- and the protected layout/placement controls before Unlock().
+                    if state.original_text ~= nil then
+                        local ok = pcall(function() tool:SetInput("StyledText", state.original_text) end)
+                        if not ok then log_line("apply: WARNING failed to restore StyledText") end
+                    end
+                    for _, pid in ipairs(state.preserve_ids) do
+                        if state.preserved[pid] ~= nil then
+                            pcall(function() tool:SetInput(pid, state.preserved[pid]) end)
+                        end
+                    end
                 end
+            end)
+
+            if locked then
+                local unlock_ok, unlock_err = pcall(function() comp:Unlock() end)
+                if not unlock_ok then
+                    log_line("apply: WARNING comp Unlock() failed: " .. tostring(unlock_err))
+                end
+            end
+
+            if not apply_ok then
+                log_line("apply: ERROR during locked batch: " .. tostring(apply_err))
             end
         end
     end
+
     return changed, found
 end
 
