@@ -1,61 +1,52 @@
 # Changelog
 
-## v1.0.3 - 2026-09-07
+All notable changes to Text+ Style Gallery are documented here.
 
-### Changed
+## [1.1.0] - 2026-09-13
 
-- Significantly improved style-application performance, especially when applying a style to multiple Text+ clips.
-- Batched Text+ input updates while the Fusion composition is locked, reducing unnecessary intermediate evaluations.
-- Updated the Clip Color Filter to match DaVinci Resolve clip colors: Orange, Apricot, Yellow, Lime, Olive, Green, Teal, Navy, Blue, Purple, Violet, Pink, Tan, Beige, Brown, and Chocolate.
-
-### Compatibility
-
-- The v1.0.1 Shading Element initialization fix is retained.
-- Style application continues to preserve the destination `StyledText` and protected layout values.
-- No changes were made to the style library format.
-- Existing saved style libraries remain compatible.
-
-## v1.0.2 - 2026-09-04
-
-### Changed
-
-- Reduced the gallery window width for a more compact layout.
-- Kept thumbnail previews at the same size.
-- Shortened the style-name input fields.
-- Shortened the JSON filename input field.
-- Slightly compacted the top filter controls.
-- Adjusted the final window width so the Capture and Delete buttons remain fully visible.
-
-### Compatibility
-
-- No functional changes were made to style capture or style application.
-- Existing saved style libraries remain compatible.
-
-## v1.0.1 - 2026-09-04
+### Added
+- Extended Text+ Shading support, including Gradient fills.
+- Gradient capture/apply for multiple color stops.
+- Gradient Mapping settings including Angle, Size, Aspect, and Mapping Level.
+- Image Shading capture/apply using external image file references.
+- Image Shading settings including Mapping Angle, Size, Aspect, Mapping Level, Image Sampling, and Image Edge.
+- Improved thumbnail representation for character-level Border Fill / Border Outline.
+- Gradient thumbnails now use a representative color plus a small gradient indicator bar for easier identification.
 
 ### Fixed
+- Correctly restores the Shading `TypeN` when switching between Gradient and Solid styles, so applying a Solid style after a Gradient works reliably.
+- Preserved native Fusion Gradient data by applying `ShadingGradientN` through `SaveSettings()` / `LoadSettings()` rather than attempting to recreate Gradient userdata with `SetInput()`.
 
-- Fixed an issue where some Shading Elements, especially shadows, were not fully applied on the first click.
-- Shading Elements that have not yet been instantiated by DaVinci Resolve are now initialized before their properties are applied.
-- Styles containing previously unused Shading Elements now apply correctly with a single click.
+### Notes
+- Gradient thumbnails are intentionally approximate and do not reproduce Resolve's final rendered Gradient exactly.
+- Image Shading thumbnails do not reproduce the source image exactly.
+- Image Shading stores the external image file path. Moving, renaming, or deleting the referenced image can cause the image to be unavailable when the style is applied. Exporting the JSON alone does not package the referenced image file.
+- Animation, keyframes, Follower, expressions, and Character Level Styling are outside the scope of the style gallery.
 
-### Compatibility
+## [1.0.3]
 
-- No changes were made to the style library format.
-- Existing saved style libraries from v1.0.0 remain compatible.
+### Changed
+- Improved style application performance by batching Text+ input updates with Fusion composition Lock/Unlock.
+- Kept Shading Element bootstrap operations outside the composition lock for compatibility.
+- Corrected the Clip Color list to match DaVinci Resolve.
 
-## v1.0.0 - 2026-09-04
+## [1.0.2]
 
-### Initial public release
+### Changed
+- Made the gallery window more compact.
+- Reduced thumbnail and control sizes while keeping the 10-slot page layout.
 
-- 10 pages x 10 slots for 100 Text+ styles
-- Generic Text+ style capture
-- Safe style application while preserving `StyledText`
-- Multiple Shading Element capture/application
-- Fill, outline and shadow-aware SVG thumbnail previews
-- Apply targeting by current clip, video track and clip color
-- JSON import/export
-- Per-user data storage
-- Native Lua implementation with no Python/Pillow requirement
-- Cached thumbnails and in-place page updates for fast Prev/Next navigation
-- Compact gallery layout
+## [1.0.1]
+
+### Fixed
+- Fixed Shading Element initialization for elements whose detailed inputs had not yet been instantiated by Resolve.
+- Missing Shading Elements are bootstrapped before their captured settings are applied.
+
+## [1.0.0]
+
+- Initial public release.
+- 100 style slots organized as 10 pages of 10.
+- Capture and apply Text+ styles while preserving the destination text content.
+- Apply styles to the current clip, selected video track, or clips filtered by clip color.
+- JSON import/export.
+- SVG thumbnail previews.
