@@ -8,8 +8,8 @@ A lightweight **native Lua style gallery for Text+** in DaVinci Resolve / Fusion
 
 Save frequently used Text+ looks, preview them as thumbnails, and apply them to other Text+ clips without replacing the actual text content.
 
-**Version:** 1.0.0  
-**Release date:** 2026-09-04
+**Version:** 1.1.0  
+**Release date:** 2026-09-13
 
 ## Features
 
@@ -18,7 +18,12 @@ Save frequently used Text+ looks, preview them as thumbnails, and apply them to 
 - Apply a saved style by clicking its thumbnail
 - Preserves `StyledText`, so the destination clip's actual text is not replaced
 - Apply to the current clip or filter targets by video track / clip color
-- Multiple Text+ **Shading Elements** supported, including fill, outlines and shadows
+- Multiple Text+ **Shading Elements** supported, including fills, outlines, shadows and borders
+- **Gradient Fill** support, including multiple color stops
+- Gradient Mapping settings including **Angle, Size, Aspect, and Mapping Level**
+- **Image Shading** support using external image files
+- Image Shading settings including **Mapping Angle, Size, Aspect, Mapping Level, Image Sampling, and Image Edge**
+- Character-level and whole-text Border Fill / Border Outline support
 - SVG thumbnail previews generated directly in Lua
 - No Python or Pillow dependency
 - Import / Export of the style library as JSON
@@ -90,6 +95,41 @@ textplus_styles_10x10_lua.json
 
 Use **Export** before moving machines or making major changes. Use **Import** to load a previously exported library.
 
+## Gradient support
+
+Text+ Gradient Shading can be captured and reapplied, including:
+
+- Two-color gradients
+- Multi-stop gradients
+- Mapping Angle
+- Mapping Size
+- Mapping Aspect
+- Mapping Level (Character / Text)
+
+Gradient data is preserved using Fusion's native settings representation.
+
+Gradient thumbnails are intended for style identification rather than pixel-accurate reproduction. They use a representative color together with a small gradient indicator bar.
+
+## Image Shading
+
+Text+ Image Shading can be captured and reapplied, including:
+
+- External image file reference
+- Mapping Angle
+- Mapping Size
+- Mapping Aspect
+- Mapping Level
+- Image Sampling
+- Image Edge
+
+### Important: external image files
+
+Image Shading stores a reference to the **original external image file path**. The image itself is not embedded or copied into the gallery JSON.
+
+If the source image is moved, renamed, deleted, or unavailable on another computer, the style settings can still be applied, but the referenced image cannot be displayed.
+
+Therefore, exporting the JSON alone does **not** make Image Shading assets fully portable between computers.
+
 ## Thumbnail preview
 
 Thumbnail previews use:
@@ -100,11 +140,16 @@ Aaあア123
 
 This intentionally combines Latin letters, Japanese hiragana/katakana and numbers so both Latin and Japanese font styles are easier to distinguish. On systems without Japanese glyph support, those glyphs may be rendered with a fallback font; this does not affect style application.
 
+Thumbnail rendering is an approximation of Resolve's Text+ renderer. Gradient and Image Shading previews are simplified and are intended for identifying styles rather than reproducing Resolve's final render exactly.
+
 ## Notes and limitations
 
 - This is a native Lua script intended for DaVinci Resolve / Fusion's scripting environment.
-- Complex Fusion objects such as Expressions, Modifiers, Splines and Gradient objects are intentionally not serialized as ordinary style values.
-- Thumbnail rendering is an approximation of Resolve's Text+ renderer. SVG previews are intended for identifying styles, not pixel-perfect reproduction.
+- The gallery focuses on reusable **static Text+ appearance styles**.
+- Animation, keyframes, Follower, expressions, and Character Level Styling are outside the scope of the gallery.
+- The destination clip's `StyledText` is preserved when applying a style.
+- Protected layout and position values are preserved when applying a style.
+- Image Shading depends on the referenced external image file remaining available at its stored path.
 - SVG thumbnail display depends on the Qt image support bundled with DaVinci Resolve.
 - Keep a backup/export of important style libraries.
 
@@ -114,4 +159,8 @@ Released under the **MIT License**. See `LICENSE`.
 
 ## Release
 
-The first public release is **v1.0.0**. Internal development builds leading to this release used different version numbers; the public version starts at v1.0.0.
+The latest release is **v1.1.0**.
+
+v1.1.0 adds Gradient and Image Shading support, improves Border thumbnail representation, and improves reliable switching between Gradient and Solid Shading styles.
+
+See `CHANGELOG.md` and `RELEASE_NOTES_v1.1.0.md` for details.
